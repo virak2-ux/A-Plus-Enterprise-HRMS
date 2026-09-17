@@ -1,40 +1,56 @@
-# Cambodia Enterprise Human Resource Management System (HRMS)
+# A Plus Enterprise HRMS
 
-A production-ready, modular, bilingual (**Khmer & English**), multi-currency (**KHR & USD**) Human Resource Management System designed for enterprises operating in Cambodia (10 to 5,000+ employees).
+> **Enterprise Human Resource Management & Deterministic Cambodia Payroll System**  
+> **Author & Creator**: `@virak81`  
+> **Repository**: [https://github.com/virak2-ux/A-Plus-Enterprise-HRMS](https://github.com/virak2-ux/A-Plus-Enterprise-HRMS)
+
+A production-ready, modular, bilingual (**Khmer & English**), multi-currency (**KHR & USD**) Human Resource Management System designed for enterprises operating in Cambodia (10 to 5,000+ employees), equipped with **Global Dark Mode** and modern **Gen Z UI**.
 
 ---
 
-## 1. Key Features
+## 1. Key Features & Domain Modules
 
-- **Full Employee Lifecycle**: Organization structure, multi-company support, positions, employee master data, biometric attendance, shift scheduling, Cambodia holidays, leave workflows, and offboarding.
-- **Cambodia Deterministic Payroll Engine**:
-  - Fully configurable and versioned GDT Tax on Salary (ToS) progressive brackets.
-  - Dependent rebates (150,000 KHR/person for spouse and children).
-  - NSSF statutory calculations: Occupational Risk (0.8%), Health Care (2.6%), and Pension Scheme (2% employee + 2% employer) with wage ceiling and floor limits.
-  - Multi-currency: Contracts in USD converted at active NBC exchange rates, with dual-currency net payout statements.
-  - Explainable calculation snapshot with complete mathematical trace and formula logging.
-  - 16-step payroll execution lifecycle: Draft → Calculated → Review → Approved → Locked.
-- **Enterprise Security & RBAC**:
-  - Argon2id password hashing.
-  - 12 predefined roles across 11 action types.
-  - Sensitive confidential field masking (base salaries, bank accounts, national IDs).
-  - Immutable audit trail with old/new snapshot JSON diffs.
-- **Modern Responsive UI**:
-  - Next.js 15 App Router, React 19, TypeScript, Tailwind CSS, Lucide icons.
-  - TanStack Table v8 for virtualized employee records, search, sorting, and filters.
-  - Recharts for executive management dashboards.
-  - Real-time bilingual toggling (**English** and **ភាសាខ្មែរ**) and currency switcher (**$ USD** and **៛ KHR**).
+- **Interactive Visual Org Chart & Headcount Budgeting**:
+  - Recursive employee reporting hierarchy tree starting from executive leaders down through direct report lines with collapse/expand branches and report counts.
+  - Headcount quota tracking vs. actual filled seats, vacancy monitoring, and department compensation budget vs actual payroll burden.
+  - Salary band compliance radar flagging employees below Grade minimum or exceeding maximum thresholds.
+- **Global Dark Mode & Gen Z Glassmorphic UI**:
+  - Persistent theme engine (Sun ☀️ / Moon 🌙 toggle) synchronized with `localStorage` and system preference.
+  - Ambient glowing gradient meshes, glassmorphism (`backdrop-blur-xl`), and vibrant neon statutory tags.
+- **Cambodia Labor Law Article 139 Overtime Engine**:
+  - Enforced statutory overtime multipliers:
+    - **150% (1.5x)**: Normal Day Overtime (Monday – Saturday)
+    - **200% (2.0x)**: Night Shift Overtime (22:00 – 06:00)
+    - **200% (2.0x)**: Weekly Rest Day (Sunday)
+    - **200% (2.0x)**: Paid Public Holidays (Prakas 443)
+  - Automated payroll ingestion: approved overtime dynamically feeds earnings into locked payroll runs.
+- **Progressive Disciplinary Compliance & Official Warning Letters (Articles 26–29)**:
+  - Progressive pipeline: Verbal $\to$ 1st Written $\to$ 2nd Written $\to$ Suspension $\to$ Dismissal.
+  - Strict Article 27 validation: Disciplinary suspension without pay cannot legally exceed **7 days**.
+  - Official bilingual printable Ministry of Labour and Vocational Training (MLVT) Warning Letter HTML (`លិខិតព្រមាន`).
+- **Statutory Seniority Leave (Art. 166) & Leave Encashment Calculator (Art. 167)**:
+  - Base 18 days/year + 1 additional day for every 3 years of continuous service (`years // 3`).
+  - Leave encashment formula based on statutory 26 working days (`daily_wage = base_salary / 26`).
+  - Official Prakas 443 20-day public holidays calendar.
+- **Full-Stack Employee Self-Service (ESS) & Manager Approvals**:
+  - 6-tab responsive portal: Geofenced web clock-in/out, leave requests, overtime applications, salary advance applications, disciplinary notice sign-off, and 1-click supervisor approvals center.
+- **Deterministic Cambodia Payroll Engine**:
+  - GDT Tax on Salary (ToS) progressive brackets (0%–20%) with 150,000៛/person dependent rebates.
+  - NSSF statutory calculations: Occupational Risk (0.8%), Health Care (2.6%), and Pension (2% employee + 2% employer) with wage ceilings.
+  - ABA Bank, ACLEDA Bank, and Universal batch disbursement exports.
+  - Official bilingual printable payslips (`ប័ណ្ណបើកប្រាក់បៀវត្ស`).
+- **Enterprise Security, Audit Trail & Multi-Branch Switcher**:
+  - Argon2id password hashing, RBAC, and tamper-evident append-only audit trail logging JSON state diffs.
+  - Multi-location context switcher (Phnom Penh HQ, Siem Reap Hub, Sihanoukville Port).
 
 ---
 
 ## 2. Technology Stack
 
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS, TanStack Table v8, TanStack Query v5, Recharts, Lucide React.
+- **Frontend**: Next.js 15 App Router, React 19, TypeScript, Tailwind CSS, TanStack Table v8, Recharts, Lucide React.
 - **Backend**: Python 3.13+, FastAPI, SQLAlchemy 2.0, Pydantic v2, Alembic, Argon2-cffi, PyJWT.
 - **Database & Cache**: PostgreSQL 17+, Redis 7+ (with automatic SQLite fallback for lightweight standalone development).
-- **Background Worker**: Celery + Redis broker.
-- **Document & Media Storage**: S3-compatible private object store (MinIO dev / AWS S3 prod).
-- **Testing**: Pytest (100% passing automated unit & integration test suite).
+- **Testing**: Pytest (All 36 automated unit & integration tests passing with 100% success).
 
 ---
 
@@ -43,23 +59,23 @@ A production-ready, modular, bilingual (**Khmer & English**), multi-currency (**
 ```text
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/          # REST API routers (auth, org, employees, attendance, leave, payroll, system)
+│   │   ├── api/v1/          # REST API routers (auth, org, employees, attendance, leave, payroll, overtime, loans, disciplinary, ai)
 │   │   ├── core/            # Config, database engine, Argon2/JWT security
 │   │   ├── models/          # SQLAlchemy 2.0 models across 26 domains
 │   │   ├── schemas/         # Pydantic v2 validation schemas
-│   │   ├── services/        # Deterministic Cambodia payroll engine, audit logger
+│   │   ├── services/        # Deterministic Cambodia payroll engine, audit logger, bank exports, payslip generator
 │   │   └── main.py          # FastAPI application entry point
 │   ├── scripts/
 │   │   └── seed_data.py     # Database seeder (roles, rules, company, employees)
-│   ├── tests/               # Pytest automated test suite
+│   ├── tests/               # 8 test modules (36 tests, 100% passing)
 │   ├── requirements.txt
 │   └── Dockerfile
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── app/             # Next.js App Router pages (Dashboard, Employees, Payroll)
-│   │   ├── components/      # Reusable Navbar, Sidebar, and UI widgets
-│   │   ├── context/         # Bilingual i18n and KHR/USD currency context
+│   │   ├── app/             # Next.js App Router (21 routes: Dashboard, Org Chart, Employees, ESS, Payroll, Overtime, Disciplinary, etc.)
+│   │   ├── components/      # Navbar, Sidebar, modals, and UI widgets
+│   │   ├── context/         # Bilingual i18n, KHR/USD currency, and Global Theme (Dark/Light) context
 │   │   ├── locales/         # en.json and km.json translation dictionaries
 │   │   └── lib/             # Axios API client
 │   ├── package.json
@@ -75,16 +91,17 @@ A production-ready, modular, bilingual (**Khmer & English**), multi-currency (**
 
 ## 4. Quickstart Guide
 
-### Option A: Running with Docker Compose (Recommended for Production)
+### Option A: Running with Docker Compose
 
 ```bash
 # Clone and enter repository
-cd "HR System"
+git clone https://github.com/virak2-ux/A-Plus-Enterprise-HRMS.git
+cd A-Plus-Enterprise-HRMS
 
 # Copy environment variables
 cp .env.example .env
 
-# Build and start all services (Frontend, Backend, Postgres, Redis, MinIO, Celery)
+# Build and start all services
 docker compose up -d
 
 # Run database seeder inside backend container
@@ -93,7 +110,6 @@ docker compose exec backend python scripts/seed_data.py
 
 - **Frontend Application**: `http://localhost:3000`
 - **Backend API & Swagger Docs**: `http://localhost:8000/api/v1/docs`
-- **MinIO Console**: `http://localhost:9001` (User: `minioadmin` / Pass: `minioadminpassword`)
 
 ---
 
@@ -102,25 +118,25 @@ docker compose exec backend python scripts/seed_data.py
 #### 1. Backend Setup
 ```bash
 cd backend
-# Create virtual environment and install dependencies
-uv venv .venv --python 3.14
-uv pip install -r requirements.txt
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
 
-# Run database seeder (initializes database, roles, rules, and demo employees)
+# Run database seeder
 .venv\Scripts\python scripts\seed_data.py
 
-# Run automated tests
+# Run all 36 tests
 .venv\Scripts\pytest -v
 
-# Start FastAPI dev server
-.venv\Scripts\uvicorn app.main:app --reload --port 8000
+# Start FastAPI server
+.venv\Scripts\uvicorn app.main:app --port 8000
 ```
 
 #### 2. Frontend Setup
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run build
+npm start # or npm run dev
 ```
 
 Open `http://localhost:3000` in your browser.
@@ -137,17 +153,7 @@ Open `http://localhost:3000` in your browser.
 
 ---
 
-## 6. Deterministic Payroll Calculation Breakdown
+## 6. Credit & License
 
-For an employee with a **$1,000.00 USD** monthly contract salary:
-1. **Gross Conversion**: `$1,000 × 4,100 KHR/USD = 4,100,000 KHR`.
-2. **NSSF Pension Deduction (2%)**: Contributory wage capped at `1,200,000 KHR`. Employee deduction is `24,000 KHR`.
-3. **Taxable Salary Base**: `4,100,000 KHR - 24,000 KHR = 4,076,000 KHR`.
-4. **Dependent Relief**: 1 spouse + 1 qualifying child = `300,000 KHR` relief.
-5. **GDT Progressive Brackets Applied**:
-   - 0 to 1,500,000 KHR: 0%
-   - 1,500,001 to 2,000,000 KHR: 5% = `25,000 KHR`
-   - 2,000,001 to 3,776,000 KHR: 10% = `177,600 KHR`
-   - Total Tax on Salary: `202,600 KHR`.
-6. **Net Salary**: `4,100,000 - 24,000 - 202,600 = 3,873,400 KHR` (`$944.73 USD`).
-7. **Audit Snapshot**: The full calculation breakdown is captured as immutable JSON for retrospective auditability.
+Developed and architected by **`@virak81`**.  
+Repository: [https://github.com/virak2-ux/A-Plus-Enterprise-HRMS](https://github.com/virak2-ux/A-Plus-Enterprise-HRMS)
