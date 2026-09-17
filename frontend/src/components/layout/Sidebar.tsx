@@ -103,13 +103,21 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <div className="pt-3 border-t border-slate-800/80 space-y-2">
-        {/* Quick System Badge */}
-        <div className="p-2.5 rounded-xl bg-slate-800/40 dark:bg-slate-900/60 border border-slate-800 flex items-center justify-between text-[11px]">
-          <div className="flex items-center space-x-2">
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span className="font-semibold text-slate-300">Cambodia HRMS</span>
+        {/* Quick System Badge with Credit */}
+        <div className="p-2.5 rounded-xl bg-slate-800/40 dark:bg-slate-900/60 border border-slate-800 space-y-1 text-[11px]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span className="font-bold text-slate-200">A Plus Enterprise</span>
+            </div>
+            <span className="font-mono text-[9px] text-indigo-400 font-bold bg-indigo-950/80 px-1.5 py-0.2 rounded border border-indigo-800/60">
+              v1.0 Pro
+            </span>
           </div>
-          <span className="font-mono text-[9px] text-slate-500">v1.0 Pro</span>
+          <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 border-t border-slate-800/50">
+            <span>Author</span>
+            <span className="font-mono text-indigo-400 font-semibold">Credit: @virak81</span>
+          </div>
         </div>
 
         <button

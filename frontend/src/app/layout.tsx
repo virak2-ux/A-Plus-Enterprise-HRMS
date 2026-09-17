@@ -5,8 +5,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 
 export const metadata = {
-  title: 'Cambodia Enterprise HRMS',
-  description: 'Production-ready Cambodia Human Resource Management & Deterministic Payroll System',
+  title: 'A Plus Enterprise HRMS',
+  description: 'A Plus Enterprise Human Resource Management & Cambodia Deterministic Payroll System. Credit: @virak81',
 };
 
 export default function RootLayout({

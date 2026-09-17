@@ -31,8 +31,8 @@ export const Navbar: React.FC = () => {
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2.5">
           <div className="relative group cursor-pointer">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-base shadow-glow-sm group-hover:shadow-glow transition-all duration-300 transform group-hover:scale-105">
-              KH
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-sm shadow-glow-sm group-hover:shadow-glow transition-all duration-300 transform group-hover:scale-105">
+              A+
             </div>
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -47,6 +47,9 @@ export const Navbar: React.FC = () => {
               </h1>
               <span className="px-1.5 py-0.2 text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full shadow-sm">
                 Pro
+              </span>
+              <span className="text-[10px] font-mono text-indigo-500 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.2 rounded border border-indigo-200 dark:border-indigo-800/50">
+                @virak81
               </span>
             </div>
             <div className="flex items-center text-[11px] text-slate-500 dark:text-slate-400 font-medium">

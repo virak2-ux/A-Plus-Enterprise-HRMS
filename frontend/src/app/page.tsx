@@ -72,7 +72,8 @@ export default function DashboardPage() {
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            {t('dashboard.executive_summary')} &bull; {t('company_name')}
+            {t('dashboard.executive_summary')} &bull; A Plus Enterprise &bull;{' '}
+            <span className="text-indigo-600 dark:text-indigo-400 font-semibold font-mono text-xs">Credit: @virak81</span>
           </p>
         </div>
 

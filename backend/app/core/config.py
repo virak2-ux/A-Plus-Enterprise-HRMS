@@ -5,7 +5,7 @@ from pydantic import AnyHttpUrl, field_validator
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Cambodia Enterprise HRMS"
+    PROJECT_NAME: str = "A Plus Enterprise HRMS"
     API_V1_STR: str = "/api/v1"
     VERSION: str = "1.0.0"
 
