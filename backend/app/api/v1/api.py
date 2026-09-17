@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, organization, employees, attendance, leave, payroll, system, recruitment, offboarding, reports, loans, talent, documents, ai, overtime
+from app.api.v1 import auth, organization, employees, attendance, leave, payroll, system, recruitment, offboarding, reports, loans, talent, documents, ai, overtime, disciplinary
 
 api_router = APIRouter()
 
@@ -9,6 +9,7 @@ api_router.include_router(employees.router, prefix="/employees", tags=["Employee
 api_router.include_router(attendance.router, prefix="/attendance", tags=["Attendance"])
 api_router.include_router(overtime.router, prefix="/overtime", tags=["Overtime & Shifts"])
 api_router.include_router(leave.router, prefix="/leave", tags=["Leave"])
+api_router.include_router(disciplinary.router, prefix="/disciplinary", tags=["Disciplinary & Compliance"])
 api_router.include_router(payroll.router, prefix="/payroll", tags=["Payroll Engine"])
 api_router.include_router(recruitment.router, prefix="/recruitment", tags=["Recruitment & ATS"])
 api_router.include_router(offboarding.router, prefix="/offboarding", tags=["Offboarding & Final Settlement"])

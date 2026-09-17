@@ -23,6 +23,7 @@ import {
   Bot,
   Smartphone,
   Timer,
+  ShieldAlert,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -41,6 +42,7 @@ export const Sidebar: React.FC = () => {
     { name: language === 'km' ? 'ឯកសារបុគ្គលិក' : 'Documents & Expiry', href: '/documents', icon: FileText },
     { name: t('nav.recruitment'), href: '/recruitment', icon: UserCheck },
     { name: t('nav.talent'), href: '/talent', icon: Award },
+    { name: language === 'km' ? 'វិន័យ & ការព្រមាន' : 'Disciplinary & Warnings', href: '/disciplinary', icon: ShieldAlert, badge: 'Art. 27' },
     { name: language === 'km' ? 'ការបញ្ចប់កិច្ចសន្យា' : 'Offboarding', href: '/offboarding', icon: UserMinus },
     { name: t('nav.reports'), href: '/reports', icon: FileBarChart },
     { name: 'AI HR Assistant', href: '/ai-assistant', icon: Bot, badge: 'Private' },

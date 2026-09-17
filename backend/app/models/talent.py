@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, ForeignKey, Integer, Numeric, Boolean, Date, Text
+from sqlalchemy import Column, String, ForeignKey, Integer, Numeric, Boolean, Date, Text, DateTime
 from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
 
@@ -73,6 +73,12 @@ class DisciplinaryRecord(BaseModel):
     category = Column(String(50), nullable=False)  # "LATENESS", "INSUBORDINATION", "POLICY_BREACH", "MISCONDUCT"
     description = Column(Text, nullable=False)
     action_taken = Column(String(50), nullable=False)  # "VERBAL_WARNING", "FIRST_WRITTEN_WARNING", "FINAL_WARNING", "SUSPENSION"
+    warning_letter_number = Column(String(50), nullable=True, index=True)
+    suspension_days = Column(Integer, default=0, nullable=False)  # Max 7 days per Cambodia Labor Law Art. 27
+    improvement_plan = Column(Text, nullable=True)
+    acknowledged_by_employee = Column(Boolean, default=False, nullable=False)
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    employee_comments = Column(Text, nullable=True)
     evidence_url = Column(String(500), nullable=True)
     is_confidential = Column(Boolean, default=True, nullable=False)
     recorded_by_user_id = Column(String(36), nullable=False)
