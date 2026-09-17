@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguageCurrency } from '@/context/LanguageCurrencyContext';
 import {
   Settings,
@@ -30,11 +30,72 @@ export default function SettingsPage() {
   const [aiEnabled, setAiEnabled] = useState(false);
   const [allowEmployeeDataToAi, setAllowEmployeeDataToAi] = useState(false);
   const [allowSalaryDataToAi, setAllowSalaryDataToAi] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const token = localStorage.getItem('hrms_token');
+        const res = await fetch('http://127.0.0.1:8000/api/v1/system/settings', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const d = json.data || {};
+          if (d.company_name_kh) setCompNameKh(d.company_name_kh);
+          if (d.company_name_en) setCompNameEn(d.company_name_en);
+          if (d.tax_id) setTaxId(d.tax_id);
+          if (d.nssf_id) setNssfId(d.nssf_id);
+          if (d.exchange_rate) setRate(Number(d.exchange_rate));
+          if (d.dependent_rebate) setDependentRebate(Number(d.dependent_rebate));
+          if (d.nssf_ceiling) setNssfCeiling(Number(d.nssf_ceiling));
+          if (d.ai_enabled !== undefined) setAiEnabled(Boolean(d.ai_enabled));
+          if (d.allow_employee_data_to_ai !== undefined) setAllowEmployeeDataToAi(Boolean(d.allow_employee_data_to_ai));
+          if (d.allow_salary_data_to_ai !== undefined) setAllowSalaryDataToAi(Boolean(d.allow_salary_data_to_ai));
+        }
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 4000);
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('hrms_token');
+      const payload = {
+        company_name_kh: compNameKh,
+        company_name_en: compNameEn,
+        tax_id: taxId,
+        nssf_id: nssfId,
+        exchange_rate: rate,
+        dependent_rebate: dependentRebate,
+        nssf_ceiling: nssfCeiling,
+        ai_enabled: aiEnabled,
+        allow_employee_data_to_ai: allowEmployeeDataToAi,
+        allow_salary_data_to_ai: allowSalaryDataToAi,
+      };
+
+      const res = await fetch('http://127.0.0.1:8000/api/v1/system/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 4000);
+      }
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -57,10 +118,11 @@ export default function SettingsPage() {
 
         <button
           onClick={handleSave}
-          className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition shadow-sm self-start sm:self-auto"
+          disabled={saving}
+          className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition shadow-sm self-start sm:self-auto disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
-          <span>Save Changes</span>
+          <span>{saving ? (language === 'km' ? 'កំពុងរក្សាទុក...' : 'Saving...') : (language === 'km' ? 'រក្សាទុកការកែប្រែ' : 'Save Changes')}</span>
         </button>
       </div>
 

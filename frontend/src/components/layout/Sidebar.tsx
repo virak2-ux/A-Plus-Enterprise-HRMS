@@ -22,6 +22,7 @@ import {
   UserMinus,
   Bot,
   Smartphone,
+  Timer,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -33,6 +34,7 @@ export const Sidebar: React.FC = () => {
     { name: t('nav.employees'), href: '/employees', icon: Users },
     { name: t('nav.organization'), href: '/organization', icon: Building2 },
     { name: t('nav.attendance'), href: '/attendance', icon: Clock },
+    { name: language === 'km' ? 'ថែមម៉ោង & វេនការងារ' : 'Overtime & Shifts', href: '/overtime', icon: Timer, badge: 'Art. 139' },
     { name: t('nav.leave'), href: '/leave', icon: CalendarCheck },
     { name: t('nav.payroll'), href: '/payroll', icon: Calculator, badge: 'Cambodia GDT' },
     { name: language === 'km' ? 'ប្រាក់កម្ចី & បុរេប្រទាន' : 'Loans & Advances', href: '/loans', icon: CreditCard },

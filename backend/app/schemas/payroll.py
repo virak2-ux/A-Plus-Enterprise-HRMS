@@ -54,6 +54,8 @@ class PayrollItemOut(BaseModel):
     worked_days: float
     unpaid_absence_days: float
     overtime_hours: float
+    total_overtime_pay_khr: Optional[float] = 0.0
+    loan_deduction_khr: Optional[float] = 0.0
     
     gross_salary_khr: float
     nssf_pension_employee_khr: float

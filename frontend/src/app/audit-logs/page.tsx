@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguageCurrency } from '@/context/LanguageCurrencyContext';
 import {
   ShieldCheck,
@@ -97,10 +97,43 @@ const SAMPLE_AUDIT_LOGS: AuditItem[] = [
 
 export default function AuditLogsPage() {
   const { language } = useLanguageCurrency();
-  const [logs] = useState<AuditItem[]>(SAMPLE_AUDIT_LOGS);
+  const [logs, setLogs] = useState<AuditItem[]>(SAMPLE_AUDIT_LOGS);
   const [moduleFilter, setModuleFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [inspectLog, setInspectLog] = useState<AuditItem | null>(null);
+
+  useEffect(() => {
+    const fetchAuditLogs = async () => {
+      try {
+        const token = localStorage.getItem('hrms_token');
+        const res = await fetch('http://127.0.0.1:8000/api/v1/system/audit-logs?limit=100', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data && json.data.length > 0) {
+            const mapped: AuditItem[] = json.data.map((r: any) => ({
+              id: r.id,
+              user: r.user_id ? `User ${r.user_id.substring(0, 8)}` : 'System / Auto',
+              role: 'AUDITED_ACTOR',
+              action: r.action,
+              module: r.module,
+              entity_type: r.entity_type,
+              entity_id: r.entity_id || '-',
+              timestamp: r.created_at ? new Date(r.created_at).toLocaleString() : 'Recent',
+              ip_address: r.ip_address || '127.0.0.1',
+              old_values: r.old_values,
+              new_values: r.new_values,
+            }));
+            setLogs([...mapped, ...SAMPLE_AUDIT_LOGS]);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch audit logs:', err);
+      }
+    };
+    fetchAuditLogs();
+  }, []);
 
   const filtered = logs.filter((item) => {
     if (moduleFilter !== 'ALL' && item.module !== moduleFilter) return false;

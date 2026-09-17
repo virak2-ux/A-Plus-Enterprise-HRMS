@@ -12,7 +12,9 @@ from app.models.payroll import (
     PayrollItemDetail,
     TaxRule,
     ContributionRule,
+    Loan,
 )
+from app.models.overtime import OvertimeRequest
 from app.models.employee import Employee
 from app.models.company import Company
 from app.schemas.payroll import (
@@ -107,11 +109,55 @@ def calculate_payroll_run(
     total_nssf = Decimal("0")
 
     for emp in employees:
+        # Ingest approved overtime for this period (Article 139)
+        ot_requests = (
+            db.query(OvertimeRequest)
+            .filter(
+                OvertimeRequest.employee_id == emp.id,
+                OvertimeRequest.status == "APPROVED",
+                OvertimeRequest.date >= period.start_date,
+                OvertimeRequest.date <= period.end_date,
+            )
+            .all()
+        )
+        ot_150 = Decimal("0")
+        ot_200 = Decimal("0")
+        for ot in ot_requests:
+            if Decimal(str(ot.multiplier_rate)) <= Decimal("1.70"):
+                ot_150 += Decimal(str(ot.total_hours))
+            else:
+                ot_200 += Decimal(str(ot.total_hours))
+        total_ot_hours = ot_150 + ot_200
+
+        # Ingest active loan / salary advance deductions
+        active_loans = (
+            db.query(Loan)
+            .filter(
+                Loan.employee_id == emp.id,
+                Loan.status == "ACTIVE",
+                Loan.remaining_balance > 0,
+            )
+            .all()
+        )
+        total_loan_deduction_khr = Decimal("0")
+        rate_usd = Decimal(str(data.exchange_rate_usd_to_khr))
+        for ln in active_loans:
+            ded = Decimal(str(ln.monthly_deduction_amount))
+            ded = min(ded, Decimal(str(ln.remaining_balance)))
+            if ln.currency.upper() == "USD":
+                ded_khr = (ded * rate_usd).quantize(Decimal("1"))
+            else:
+                ded_khr = ded.quantize(Decimal("1"))
+            total_loan_deduction_khr += ded_khr
+
         result = CambodiaPayrollCalculator.compute_employee_payroll(
             base_salary_contract=Decimal(str(emp.base_salary)),
             currency_contract=emp.salary_currency,
-            exchange_rate_usd_to_khr=Decimal(str(data.exchange_rate_usd_to_khr)),
+            exchange_rate_usd_to_khr=rate_usd,
             worked_days=Decimal("26"),
+            overtime_hours_150=ot_150,
+            overtime_hours_200=ot_200,
+            loan_deductions_khr=total_loan_deduction_khr,
             spouse_dependent_count=emp.spouse_dependent_count,
             minor_children_count=emp.minor_children_count,
             is_resident=emp.is_resident_for_tax,
@@ -124,7 +170,7 @@ def calculate_payroll_run(
             currency_contract=emp.salary_currency,
             worked_days=Decimal("26"),
             unpaid_absence_days=Decimal("0"),
-            overtime_hours=Decimal("0"),
+            overtime_hours=total_ot_hours,
             base_salary_earned_khr=result["base_salary_earned_khr"],
             total_allowances_khr=Decimal("0"),
             total_overtime_pay_khr=result["total_overtime_pay_khr"],
@@ -140,7 +186,7 @@ def calculate_payroll_run(
             tax_relief_dependents_khr=result["tax_relief_dependents_khr"],
             tax_base_salary_khr=result["tax_base_salary_khr"],
             tax_on_salary_khr=result["tax_on_salary_khr"],
-            loan_deduction_khr=Decimal("0"),
+            loan_deduction_khr=total_loan_deduction_khr,
             other_deductions_khr=Decimal("0"),
             total_deductions_khr=result["total_deductions_khr"],
             net_salary_khr=result["net_salary_khr"],
@@ -220,6 +266,8 @@ def get_payroll_run_items(
             worked_days=float(item.worked_days),
             unpaid_absence_days=float(item.unpaid_absence_days),
             overtime_hours=float(item.overtime_hours),
+            total_overtime_pay_khr=float(item.total_overtime_pay_khr or 0.0),
+            loan_deduction_khr=float(item.loan_deduction_khr or 0.0),
             gross_salary_khr=float(item.gross_salary_khr),
             nssf_pension_employee_khr=float(item.nssf_pension_employee_khr),
             nssf_pension_employer_khr=float(item.nssf_pension_employer_khr),
@@ -281,6 +329,34 @@ def lock_payroll_run(
     period = run.period
     if period:
         period.status = "LOCKED"
+        # 1. Mark overtime as PROCESSED
+        db.query(OvertimeRequest).filter(
+            OvertimeRequest.status == "APPROVED",
+            OvertimeRequest.payroll_status == "UNPROCESSED",
+            OvertimeRequest.date >= period.start_date,
+            OvertimeRequest.date <= period.end_date,
+        ).update({"payroll_status": "PROCESSED"}, synchronize_session=False)
+
+        # 2. Settle loan repayments
+        loan_items = db.query(PayrollItem).filter(
+            PayrollItem.payroll_run_id == run.id,
+            PayrollItem.loan_deduction_khr > 0,
+        ).all()
+        for itm in loan_items:
+            loans = db.query(Loan).filter(
+                Loan.employee_id == itm.employee_id,
+                Loan.status == "ACTIVE",
+                Loan.remaining_balance > 0,
+            ).all()
+            for ln in loans:
+                if ln.currency.upper() == "USD":
+                    ded_loan_curr = Decimal(str(itm.loan_deduction_khr)) / Decimal(str(run.exchange_rate_usd_to_khr))
+                else:
+                    ded_loan_curr = Decimal(str(itm.loan_deduction_khr))
+                ln.remaining_balance = max(Decimal("0"), ln.remaining_balance - ded_loan_curr)
+                if ln.remaining_balance <= Decimal("0"):
+                    ln.status = "PAID_OFF"
+
     db.commit()
 
     AuditService.log_event(
@@ -291,7 +367,7 @@ def lock_payroll_run(
         entity_id=run.id,
         user_id=current_user.id,
     )
-    return APIResponse(data={"status": "LOCKED"}, message="Payroll run permanently locked")
+    return APIResponse(data={"status": "LOCKED"}, message="Payroll run permanently locked and statutory deductions settled")
 
 
 @router.get("/items/{item_id}/payslip", response_class=HTMLResponse)
