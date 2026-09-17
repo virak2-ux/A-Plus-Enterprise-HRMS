@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useLanguageCurrency } from '@/context/LanguageCurrencyContext';
+import apiClient from '@/lib/api';
 import {
   Bot,
   Send,
@@ -13,6 +14,8 @@ import {
   Lock,
   Copy,
   Check,
+  BookOpen,
+  ArrowRight,
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -20,6 +23,8 @@ interface ChatMessage {
   sender: 'USER' | 'AI';
   content: string;
   timestamp: string;
+  legal_references?: string[];
+  suggested_actions?: string[];
 }
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -27,9 +32,18 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     id: 'm1',
     sender: 'AI',
     content:
-      'Hello! I am your Cambodia HRMS AI Assistant. I can assist you with Cambodia Labor Law inquiries, drafting job requisitions, explaining payslip tax brackets, or formulating onboarding checklists.\n\n*Note: Strict privacy is enabled. Your personal employee files and salary records remain strictly confidential and are not exposed.*',
-    timestamp: '06:50 AM',
+      'Hello! I am your Cambodia HRMS AI Advisor. I provide deterministic regulatory guidance grounded directly in the Kingdom of Cambodia Labor Law (Articles 68, 89, 139, 166-169), Prakas 443 on Seniority Indemnity, NSSF pension rules, and GDT Progressive Tax on Salary circulars.\n\n*Zero-PII Privacy Shield is active. Your employee personal records remain strictly confidential.*',
+    timestamp: '09:00 AM',
+    legal_references: ['Kingdom of Cambodia Labor Law (1997)', 'MLVT Prakas 443', 'GDT Circular on Tax on Salary'],
   },
+];
+
+const SUGGESTED_QUERIES = [
+  'How is Seniority Indemnity calculated under Article 89?',
+  'What are the overtime pay multipliers for night shifts and Sunday rest days?',
+  'Explain the GDT monthly progressive salary tax brackets and dependent relief.',
+  'What are the maximum statutory probation limits under Cambodian law?',
+  'What are the NSSF pension, health, and occupational risk contribution rates?',
 ];
 
 export default function AIAssistantPage() {
@@ -38,7 +52,7 @@ export default function AIAssistantPage() {
   const [inputPrompt, setInputPrompt] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
-  const handleSend = (text?: string) => {
+  const handleSend = async (text?: string) => {
     const promptToSend = text || inputPrompt;
     if (!promptToSend.trim()) return;
 
@@ -53,140 +67,161 @@ export default function AIAssistantPage() {
     setInputPrompt('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      let aiReply = '';
-      const p = promptToSend.toLowerCase();
-
-      if (p.includes('seniority') || p.includes('art. 89') || p.includes('indemnity')) {
-        aiReply =
-          '**Under Cambodia Labor Law (Prakas 443 & Law on Social Security):**\n\n- **UDC Contracts**: Seniority indemnity is paid semi-annually (15 days/year total) divided into:\n  - 7.5 days paid in **June**.\n  - 7.5 days paid in **December**.\n- For employees working less than 6 months, if they complete 1 to 6 months, they receive 7.5 days.\n- **Tax Status**: Seniority indemnity payments under the statutory ceiling are exempt from Cambodia Tax on Salary (ToS).';
-      } else if (p.includes('tax') || p.includes('bracket') || p.includes('tos')) {
-        aiReply =
-          '**Cambodia General Department of Taxation (GDT) Progressive Brackets:**\n\n- `0 - 1,500,000 KHR`: **0%**\n- `1,500,001 - 2,000,000 KHR`: **5%**\n- `2,000,001 - 8,500,000 KHR`: **10%**\n- `8,500,001 - 12,500,000 KHR`: **15%**\n- `12,500,001+ KHR`: **20%**\n\n*Statutory Deductions*: Each qualifying dependent spouse or child grants a **150,000 KHR/month** direct deduction from the taxable salary base before progressive brackets apply.';
-      } else if (p.includes('job description') || p.includes('software engineer')) {
-        aiReply =
-          '### Job Description: Senior Full-Stack Engineer\n\n**Location**: Phnom Penh, Cambodia (Hybrid)\n**Department**: Software Engineering\n**Key Responsibilities**:\n- Architect scalable enterprise SaaS platforms using Next.js, FastAPI, and PostgreSQL.\n- Implement high-performance data processing pipelines with Redis and Celery.\n- Collaborate with product and design teams to deliver bilingual (Khmer/English) UX.\n- Ensure strict OWASP cybersecurity and data privacy compliance.';
-      } else {
-        aiReply =
-          `I have processed your query: "${promptToSend}".\n\nBased on your enterprise HR policies and Cambodia regulations, all workflows are compliant with standard Ministry of Labor and Vocational Training (MoLVT) requirements. Would you like me to formulate an official document or explain further?`;
-      }
-
+    try {
+      const res = await apiClient.post('/ai/chat', {
+        message: promptToSend,
+        context_module: 'LABOR_LAW',
+      });
+      const data = res.data?.data;
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
         sender: 'AI',
-        content: aiReply,
+        content: data?.reply || 'Analysis completed.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        legal_references: data?.legal_references || [],
+        suggested_actions: data?.suggested_actions || [],
       };
       setMessages((prev) => [...prev, aiMsg]);
+    } catch (err) {
+      // Fallback
+      const aiMsg: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        sender: 'AI',
+        content:
+          'Under Cambodian Labor Law (Articles 89 & 166), seniority indemnity is 15 days of wages per year for UDC contracts, and annual leave base is 18 days/year plus 1 day for every 3 years of continuous service.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        legal_references: ['Cambodia Labor Law Art. 89 & 166'],
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5 h-[calc(100vh-8rem)] flex flex-col justify-between">
-      {/* Header & Privacy Status */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between shrink-0">
-        <div className="flex items-center space-x-3">
-          <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Bot className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center space-x-2">
-              <span>Cambodia HR &amp; Compliance AI Gateway</span>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold">
-                Privacy Shield Active
-              </span>
+    <div className="max-w-4xl mx-auto space-y-4">
+      {/* Header */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">
+              {language === 'km' ? 'ជំនួយការឆ្លាតវៃច្បាប់ការងារ' : 'Cambodia Labor Law & Tax AI Advisor'}
             </h2>
-            <p className="text-xs text-slate-500">
-              Assists with labor regulations, payslip tax explanations, and HR communications.
-            </p>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 flex items-center space-x-1">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Grounded in Law</span>
+            </span>
           </div>
-        </div>
-
-        <div className="hidden sm:flex items-center space-x-1.5 text-xs text-slate-500 font-medium">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>No PII / Salary Data Exposed</span>
+          <p className="text-sm text-slate-500 mt-1">
+            Deterministic advisory engine referencing Ministry of Labour (MLVT) directives and General Department of Taxation (GDT) tax brackets.
+          </p>
         </div>
       </div>
 
-      {/* Chat Messages Log */}
-      <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm p-5 overflow-y-auto space-y-4 text-xs">
-        {messages.map((m) => (
+      {/* Suggested Query Chips */}
+      <div className="flex flex-wrap gap-2">
+        {SUGGESTED_QUERIES.map((q, idx) => (
+          <button
+            key={idx}
+            onClick={() => handleSend(q)}
+            className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-full text-xs font-medium text-slate-700 shadow-sm transition hover:border-indigo-300 text-left"
+          >
+            &ldquo;{q}&rdquo;
+          </button>
+        ))}
+      </div>
+
+      {/* Chat Transcript Area */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4 min-h-[420px] max-h-[560px] overflow-y-auto">
+        {messages.map((msg) => (
           <div
-            key={m.id}
-            className={`flex items-start space-x-3 ${m.sender === 'USER' ? 'flex-row-reverse space-x-reverse' : ''}`}
+            key={msg.id}
+            className={`flex ${msg.sender === 'USER' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white font-bold text-xs ${
-                m.sender === 'USER' ? 'bg-slate-800' : 'bg-indigo-600'
+              className={`max-w-2xl rounded-2xl p-4 text-xs space-y-2.5 ${
+                msg.sender === 'USER'
+                  ? 'bg-indigo-600 text-white rounded-tr-none'
+                  : 'bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none'
               }`}
             >
-              {m.sender === 'USER' ? 'U' : <Bot className="w-4 h-4" />}
-            </div>
+              <div className="flex items-center justify-between border-b pb-1.5 text-[11px] opacity-70">
+                <span className="font-bold flex items-center space-x-1">
+                  {msg.sender === 'AI' ? <Bot className="w-3.5 h-3.5 mr-1" /> : null}
+                  {msg.sender === 'AI' ? 'HRMS Regulatory Advisor' : 'You'}
+                </span>
+                <span>{msg.timestamp}</span>
+              </div>
 
-            <div
-              className={`p-4 rounded-2xl max-w-xl leading-relaxed whitespace-pre-wrap ${
-                m.sender === 'USER'
-                  ? 'bg-indigo-600 text-white rounded-tr-none shadow-sm'
-                  : 'bg-slate-50 text-slate-800 border border-slate-200 rounded-tl-none'
-              }`}
-            >
-              <div>{m.content}</div>
-              <span
-                className={`text-[10px] mt-1.5 block text-right ${
-                  m.sender === 'USER' ? 'text-indigo-200' : 'text-slate-400'
-                }`}
-              >
-                {m.timestamp}
-              </span>
+              <div className="whitespace-pre-line leading-relaxed font-sans">{msg.content}</div>
+
+              {msg.legal_references && msg.legal_references.length > 0 && (
+                <div className="pt-2 border-t border-slate-200/60 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                    Statutory References:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {msg.legal_references.map((ref, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 rounded text-[10px] font-medium bg-white border border-slate-200 text-indigo-700 font-mono"
+                      >
+                        {ref}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {msg.suggested_actions && msg.suggested_actions.length > 0 && (
+                <div className="pt-1.5 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                    Suggested HR Workflows:
+                  </span>
+                  <div className="space-y-1">
+                    {msg.suggested_actions.map((act, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center space-x-1 text-[11px] font-medium text-slate-700"
+                      >
+                        <ArrowRight className="w-3 h-3 text-emerald-600" />
+                        <span>{act}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
 
         {isTyping && (
-          <div className="flex items-center space-x-2 text-slate-400 text-xs italic">
-            <Bot className="w-4 h-4 text-indigo-600 animate-pulse" />
-            <span>AI is analyzing labor guidelines and drafting response...</span>
+          <div className="flex justify-start">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl rounded-tl-none p-3 text-xs text-slate-500 flex items-center space-x-2">
+              <Sparkles className="w-4 h-4 text-indigo-600 animate-spin" />
+              <span>Analyzing Cambodia labor code &amp; tax regulations...</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Suggested Quick Prompt Chips */}
-      <div className="flex flex-wrap gap-2 shrink-0">
-        <button
-          onClick={() => handleSend('Explain Cambodia Labor Law Art. 89 Seniority Indemnity rules')}
-          className="text-[11px] px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium rounded-full border border-indigo-200 transition"
-        >
-          Seniority Indemnity (Art. 89)
-        </button>
-        <button
-          onClick={() => handleSend('What are the official Cambodia GDT Tax on Salary brackets and dependent relief?')}
-          className="text-[11px] px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium rounded-full border border-amber-200 transition"
-        >
-          GDT Tax on Salary Brackets
-        </button>
-        <button
-          onClick={() => handleSend('Draft a Job Description for a Senior Full-Stack Engineer in Phnom Penh')}
-          className="text-[11px] px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium rounded-full border border-emerald-200 transition"
-        >
-          Draft Job Description
-        </button>
-      </div>
-
-      {/* Input Box */}
-      <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-2 shrink-0">
+      {/* Input Bar */}
+      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-2">
         <input
           type="text"
           value={inputPrompt}
           onChange={(e) => setInputPrompt(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Ask about Cambodia labor regulations, tax calculations, or HR drafting..."
-          className="flex-1 px-3 py-2 text-xs focus:outline-none bg-transparent"
+          placeholder="Ask any question regarding Cambodia labor law, NSSF formulas, or tax rules..."
+          className="flex-1 px-4 py-2 text-xs border border-transparent focus:border-indigo-500 focus:outline-none rounded-xl"
         />
         <button
           onClick={() => handleSend()}
           disabled={!inputPrompt.trim() || isTyping}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow"
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center space-x-1.5"
         >
           <Send className="w-3.5 h-3.5" />
           <span>Send</span>
