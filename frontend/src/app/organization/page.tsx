@@ -12,446 +12,680 @@ import {
   Layers,
   Search,
   CheckCircle2,
+  AlertTriangle,
+  TrendingUp,
   DollarSign,
+  UserCheck,
+  Award,
+  ArrowUpRight,
+  ShieldAlert,
+  GitFork,
+  PieChart,
 } from 'lucide-react';
 import apiClient from '@/lib/api';
 
-interface PositionItem {
+interface OrgChartNode {
   id: string;
-  code: string;
-  title_en: string;
-  title_kh: string;
-  job_grade: string;
-  headcount_budget: number;
-  min_salary: number;
-  max_salary: number;
+  employee_code: string;
+  name_en: string;
+  name_kh: string;
+  gender: string;
+  email: string;
+  phone: string;
+  position_title_en: string;
+  position_title_kh: string;
+  department_name_en: string;
+  department_name_kh: string;
+  employment_type: string;
+  profile_photo_url: string | null;
+  base_salary: number;
+  salary_currency: string;
+  direct_reports_count: number;
+  total_subordinates_count: number;
+  children: OrgChartNode[];
 }
 
-interface DepartmentItem {
-  id: string;
+interface DeptBudgetMetric {
+  department_id: string;
   code: string;
   name_en: string;
   name_kh: string;
-  positions: PositionItem[];
+  approved_headcount: number;
+  actual_headcount: number;
+  vacancies: number;
+  utilization_pct: number;
+  status: 'OPTIMAL' | 'UNDER_STAFFED' | 'OVER_BUDGET';
+  monthly_budget_usd: number;
+  actual_burden_usd: number;
+  variance_usd: number;
+  salary_band_violations: any[];
+  positions_count: number;
 }
 
-interface CompanyItem {
-  id: string;
-  name_en: string;
-  name_kh: string;
-  code: string;
-  departments: DepartmentItem[];
+interface BudgetSummary {
+  total_approved_headcount: number;
+  total_active_headcount: number;
+  total_vacancies: number;
+  overall_utilization_pct: number;
+  total_monthly_budget_usd: number;
+  total_actual_burden_usd: number;
+  total_variance_usd: number;
+  total_salary_band_violations: number;
 }
-
-const INITIAL_ORG_DATA: CompanyItem[] = [
-  {
-    id: 'c1',
-    code: 'CAMTECH',
-    name_en: 'CamTech Solutions Co., Ltd.',
-    name_kh: 'ក្រុមហ៊ុន ខេមតិច សូលូសិន ឯ.ក',
-    departments: [
-      {
-        id: 'd1',
-        code: 'DEP-HR',
-        name_en: 'Human Resources',
-        name_kh: 'នាយកដ្ឋានធនធានមនុស្ស',
-        positions: [
-          {
-            id: 'p1',
-            code: 'POS-HRD',
-            title_en: 'HR Director',
-            title_kh: 'ប្រធានផ្នែកធនធានមនុស្ស',
-            job_grade: 'GRADE-E1',
-            headcount_budget: 1,
-            min_salary: 1500,
-            max_salary: 3000,
-          },
-          {
-            id: 'p2',
-            code: 'POS-HRO',
-            title_en: 'HR Officer',
-            title_kh: 'មន្ត្រីធនធានមនុស្ស',
-            job_grade: 'GRADE-S1',
-            headcount_budget: 2,
-            min_salary: 500,
-            max_salary: 900,
-          },
-        ],
-      },
-      {
-        id: 'd2',
-        code: 'DEP-FIN',
-        name_en: 'Finance & Accounting',
-        name_kh: 'នាយកដ្ឋានហិរញ្ញវត្ថុ',
-        positions: [
-          {
-            id: 'p3',
-            code: 'POS-ACC',
-            title_en: 'Senior Accountant',
-            title_kh: 'គណនេយ្យករជាន់ខ្ពស់',
-            job_grade: 'GRADE-S2',
-            headcount_budget: 2,
-            min_salary: 800,
-            max_salary: 1500,
-          },
-        ],
-      },
-      {
-        id: 'd3',
-        code: 'DEP-ENG',
-        name_en: 'Software Engineering',
-        name_kh: 'នាយកដ្ឋានវិស្វកម្មបច្ចេកវិទ្យា',
-        positions: [
-          {
-            id: 'p4',
-            code: 'POS-ENG-SR',
-            title_en: 'Senior Software Engineer',
-            title_kh: 'វិស្វករផ្នែកទន់ជាន់ខ្ពស់',
-            job_grade: 'GRADE-S2',
-            headcount_budget: 10,
-            min_salary: 1200,
-            max_salary: 2500,
-          },
-          {
-            id: 'p5',
-            code: 'POS-ENG-JR',
-            title_en: 'Software Engineer',
-            title_kh: 'វិស្វករផ្នែកទន់',
-            job_grade: 'GRADE-S1',
-            headcount_budget: 15,
-            min_salary: 600,
-            max_salary: 1200,
-          },
-        ],
-      },
-      {
-        id: 'd4',
-        code: 'DEP-SALES',
-        name_en: 'Sales & Marketing',
-        name_kh: 'នាយកដ្ឋានលក់ និងទីផ្សារ',
-        positions: [
-          {
-            id: 'p6',
-            code: 'POS-SALES',
-            title_en: 'Sales Executive',
-            title_kh: 'មន្ត្រីទំនាក់ទំនងលក់',
-            job_grade: 'GRADE-S1',
-            headcount_budget: 8,
-            min_salary: 450,
-            max_salary: 1000,
-          },
-        ],
-      },
-      {
-        id: 'd5',
-        code: 'DEP-OPS',
-        name_en: 'Operations',
-        name_kh: 'នាយកដ្ឋានប្រតិបត្តិការ',
-        positions: [
-          {
-            id: 'p7',
-            code: 'POS-OPS-MGR',
-            title_en: 'Operations Manager',
-            title_kh: 'ប្រធានផ្នែកប្រតិបត្តិការ',
-            job_grade: 'GRADE-M1',
-            headcount_budget: 1,
-            min_salary: 1200,
-            max_salary: 2200,
-          },
-        ],
-      },
-    ],
-  },
-];
 
 export default function OrganizationPage() {
-  const { t, formatMoney, language, exchangeRate } = useLanguageCurrency();
-  const [orgData, setOrgData] = useState<CompanyItem[]>(INITIAL_ORG_DATA);
-  const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({
-    d1: true,
-    d2: true,
-    d3: true,
-    d4: true,
-    d5: true,
-  });
-  const [showAddDeptModal, setShowAddDeptModal] = useState(false);
-  const [newDeptNameEn, setNewDeptNameEn] = useState('');
-  const [newDeptNameKh, setNewDeptNameKh] = useState('');
-  const [newDeptCode, setNewDeptCode] = useState('');
+  const { language, formatMoney, exchangeRate } = useLanguageCurrency();
+  const [activeTab, setActiveTab] = useState<'chart' | 'budget' | 'bands'>('chart');
+  const [loading, setLoading] = useState(true);
+  const [treeData, setTreeData] = useState<OrgChartNode[]>([]);
+  const [budgetSummary, setBudgetSummary] = useState<BudgetSummary | null>(null);
+  const [deptBudgets, setDeptBudgets] = useState<DeptBudgetMetric[]>([]);
+  const [collapsedNodes, setCollapsedNodes] = useState<Record<string, boolean>>({});
+  const [selectedNode, setSelectedNode] = useState<OrgChartNode | null>(null);
 
-  const toggleDept = (id: string) => {
-    setExpandedDepts((prev) => ({ ...prev, [id]: !prev[id] }));
+  // Search filter
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [treeRes, budgetRes] = await Promise.all([
+        apiClient.get('/organization/hierarchy-chart'),
+        apiClient.get('/organization/budget-analysis'),
+      ]);
+      if (treeRes.data?.data) {
+        setTreeData(treeRes.data.data);
+      }
+      if (budgetRes.data?.data) {
+        setBudgetSummary(budgetRes.data.data.company_summary);
+        setDeptBudgets(budgetRes.data.data.departments || []);
+      }
+    } catch (e) {
+      console.error('Failed to load organization data', e);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAddDept = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newDeptNameEn || !newDeptCode) return;
-
-    const newDept: DepartmentItem = {
-      id: `d-${Date.now()}`,
-      code: newDeptCode.toUpperCase(),
-      name_en: newDeptNameEn,
-      name_kh: newDeptNameKh || newDeptNameEn,
-      positions: [],
-    };
-
-    setOrgData((prev) => [
-      {
-        ...prev[0],
-        departments: [...prev[0].departments, newDept],
-      },
-    ]);
-    setShowAddDeptModal(false);
-    setNewDeptNameEn('');
-    setNewDeptNameKh('');
-    setNewDeptCode('');
+  const toggleCollapse = (nodeId: string) => {
+    setCollapsedNodes((prev) => ({
+      ...prev,
+      [nodeId]: !prev[nodeId],
+    }));
   };
 
-  const totalPositions = orgData[0].departments.reduce(
-    (acc, d) => acc + d.positions.reduce((pAcc, p) => pAcc + p.headcount_budget, 0),
-    0
-  );
+  // Recursive Tree Node Renderer
+  const renderTreeNode = (node: OrgChartNode, level: number = 0) => {
+    const isCollapsed = collapsedNodes[node.id];
+    const hasChildren = node.children && node.children.length > 0;
+
+    const matchesSearch =
+      !searchTerm ||
+      node.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      node.name_kh.includes(searchTerm) ||
+      node.position_title_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      node.department_name_en.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return (
+      <div key={node.id} className="flex flex-col items-center">
+        {/* Node Card */}
+        <div
+          onClick={() => setSelectedNode(node)}
+          className={`relative z-10 w-72 p-4 rounded-2xl border transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md ${
+            matchesSearch
+              ? 'bg-white border-slate-200 hover:border-indigo-400'
+              : 'bg-slate-50/60 border-slate-200/60 opacity-40'
+          } ${selectedNode?.id === node.id ? 'ring-2 ring-indigo-600 border-indigo-600' : ''}`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm shadow-inner ${
+                  level === 0
+                    ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-white'
+                    : level === 1
+                    ? 'bg-gradient-to-br from-indigo-600 to-indigo-800 text-white'
+                    : 'bg-slate-100 text-slate-700 border border-slate-200'
+                }`}
+              >
+                {node.name_en
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 leading-tight">
+                  {language === 'km' ? node.name_kh : node.name_en}
+                </h4>
+                <p className="text-[11px] text-indigo-600 font-medium line-clamp-1">
+                  {language === 'km' ? node.position_title_kh : node.position_title_en}
+                </p>
+                <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-100 text-slate-600">
+                  {node.employee_code}
+                </span>
+              </div>
+            </div>
+
+            {hasChildren && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleCollapse(node.id);
+                }}
+                className="w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition"
+                title={isCollapsed ? 'Expand Reports' : 'Collapse Reports'}
+              >
+                {isCollapsed ? (
+                  <ChevronRight className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+            )}
+          </div>
+
+          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
+            <span className="text-slate-500 font-medium">
+              {language === 'km' ? node.department_name_kh : node.department_name_en}
+            </span>
+            {hasChildren && (
+              <span className="px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                {node.direct_reports_count} {language === 'km' ? 'កូនចៅផ្ទាល់' : 'Reports'}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Tree Line Connector to Children */}
+        {hasChildren && !isCollapsed && (
+          <div className="flex flex-col items-center w-full">
+            {/* Vertical stem from parent */}
+            <div className="w-0.5 h-6 bg-slate-300"></div>
+
+            {/* Horizontal branch bar */}
+            <div className="flex justify-center relative pt-2">
+              <div className="flex space-x-6 items-start">
+                {node.children.map((child) => (
+                  <div key={child.id} className="relative flex flex-col items-center">
+                    {/* Stem into child */}
+                    <div className="w-0.5 h-4 bg-slate-300 -mt-2 mb-2"></div>
+                    {renderTreeNode(child, level + 1)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <h2 className="text-xl font-bold text-slate-900">
-              {language === 'km' ? 'រចនាសម្ព័ន្ធស្ថាប័ន & តួនាទី' : 'Organization & Position Hierarchy'}
-            </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
-              {orgData[0].code}
+          <h2 className="text-xl font-bold text-slate-900 flex items-center space-x-2">
+            <Building2 className="w-6 h-6 text-indigo-600" />
+            <span>
+              {language === 'km'
+                ? 'រចនាសម្ព័ន្ធស្ថាប័ន & ផែនការបុគ្គលិក'
+                : 'Organization Chart & Headcount Budgeting'}
             </span>
-          </div>
-          <p className="text-sm text-slate-500 mt-1">
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
             {language === 'km'
-              ? 'គ្រប់គ្រងដេប៉ាតឺម៉ង់ តួនាទីការងារ ថ្នាក់កម្រិតការងារ និងកូតាបុគ្គលិកដែលបានអនុម័ត។'
-              : 'Manage company departments, position definitions, job grades, and approved headcount budgets.'}
+              ? 'គ្រប់គ្រងខ្សែបណ្តោយស្ថាប័ន ឋានានុក្រមរបាយការណ៍ និងការត្រួតពិនិត្យថវិកាប្រាក់បៀវត្ស'
+              : 'Interactive reporting hierarchy, approved headcount quotas, and compensation band compliance.'}
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddDeptModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition shadow-sm self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{language === 'km' ? 'បន្ថែមដេប៉ាតឺម៉ង់ថ្មី' : 'Add Department'}</span>
-        </button>
-      </div>
-
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Building2 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Departments</p>
-            <p className="text-2xl font-bold text-slate-900">{orgData[0].departments.length}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-            <Briefcase className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Defined Positions</p>
-            <p className="text-2xl font-bold text-slate-900">
-              {orgData[0].departments.reduce((acc, d) => acc + d.positions.length, 0)}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Headcount Capacity</p>
-            <p className="text-2xl font-bold text-slate-900">{totalPositions} Seats</p>
-          </div>
+        {/* View Switcher Tabs */}
+        <div className="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200">
+          <button
+            onClick={() => setActiveTab('chart')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
+              activeTab === 'chart'
+                ? 'bg-white text-indigo-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <GitFork className="w-3.5 h-3.5" />
+            <span>{language === 'km' ? 'ប្លង់រចនាសម្ព័ន្ធ' : 'Visual Org Chart'}</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('budget')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
+              activeTab === 'budget'
+                ? 'bg-white text-indigo-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <PieChart className="w-3.5 h-3.5" />
+            <span>{language === 'km' ? 'ផែនការ & ថវិកា' : 'Headcount & Budgeting'}</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('bands')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
+              activeTab === 'bands'
+                ? 'bg-white text-indigo-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Award className="w-3.5 h-3.5" />
+            <span>{language === 'km' ? 'កម្រិតប្រាក់ខែ' : 'Salary Bands Matrix'}</span>
+          </button>
         </div>
       </div>
 
-      {/* Visual Hierarchy Tree */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-        {/* Company Node */}
-        <div className="p-4 bg-slate-900 text-white rounded-xl flex items-center justify-between shadow">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-lg">
-              {orgData[0].code.slice(0, 3)}
+      {/* KPI Stats Ribbon */}
+      {budgetSummary && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              {language === 'km' ? 'កូតាបុគ្គលិកអនុម័ត' : 'Approved Headcount'}
+            </span>
+            <div className="flex items-baseline space-x-2 mt-1">
+              <span className="text-2xl font-black text-slate-900">
+                {budgetSummary.total_approved_headcount}
+              </span>
+              <span className="text-xs text-slate-500">Seats</span>
             </div>
-            <div>
-              <h3 className="text-base font-bold">
-                {language === 'km' ? orgData[0].name_kh : orgData[0].name_en}
-              </h3>
-              <p className="text-xs text-slate-400 font-khmer">
-                {language === 'km' ? orgData[0].name_en : orgData[0].name_kh}
-              </p>
+            <span className="text-[10px] text-indigo-600 font-medium">Board Authorized</span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              {language === 'km' ? 'បុគ្គលិកកំពុងបំពេញការងារ' : 'Active Headcount'}
+            </span>
+            <div className="flex items-baseline space-x-2 mt-1">
+              <span className="text-2xl font-black text-emerald-600">
+                {budgetSummary.total_active_headcount}
+              </span>
+              <span className="text-xs text-slate-500">
+                ({budgetSummary.overall_utilization_pct}%)
+              </span>
+            </div>
+            <span className="text-[10px] text-emerald-700 font-medium">
+              {budgetSummary.total_vacancies} Open Vacancies
+            </span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              {language === 'km' ? 'ថវិកាប្រាក់បៀវត្សប្រចាំខែ' : 'Monthly Salary Budget'}
+            </span>
+            <div className="flex items-baseline space-x-1 mt-1">
+              <span className="text-xl font-black text-slate-900">
+                ${budgetSummary.total_monthly_budget_usd.toLocaleString()}
+              </span>
+              <span className="text-xs text-slate-400">USD</span>
+            </div>
+            <span className="text-[10px] text-slate-500">
+              Actual: ${budgetSummary.total_actual_burden_usd.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              {language === 'km' ? 'ស្ថានភាពអនុលោមភាពកម្រិតប្រាក់ខែ' : 'Salary Band Compliance'}
+            </span>
+            <div className="flex items-baseline space-x-2 mt-1">
+              <span
+                className={`text-2xl font-black ${
+                  budgetSummary.total_salary_band_violations > 0
+                    ? 'text-amber-600'
+                    : 'text-emerald-600'
+                }`}
+              >
+                {budgetSummary.total_salary_band_violations === 0
+                  ? '100%'
+                  : `${budgetSummary.total_salary_band_violations} Flags`}
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-500">
+              {budgetSummary.total_salary_band_violations === 0
+                ? 'All salaries in approved bands'
+                : 'Salaries outside Grade min/max'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 1: Visual Org Chart */}
+      {activeTab === 'chart' && (
+        <div className="bg-slate-50/50 border border-slate-200 rounded-3xl p-6 shadow-inner space-y-4">
+          {/* Controls Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={
+                  language === 'km'
+                    ? 'ស្វែងរកតាមឈ្មោះ តួនាទី ឬនាយកដ្ឋាន...'
+                    : 'Search by employee, title, or department...'
+                }
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2 text-xs">
+              <button
+                onClick={() => setCollapsedNodes({})}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition"
+              >
+                {language === 'km' ? 'ពង្រីកទាំងអស់' : 'Expand All'}
+              </button>
+              <button
+                onClick={() => {
+                  const collapsed: Record<string, boolean> = {};
+                  const collapseAll = (nodes: OrgChartNode[]) => {
+                    for (const n of nodes) {
+                      if (n.children && n.children.length > 0) {
+                        collapsed[n.id] = true;
+                        collapseAll(n.children);
+                      }
+                    }
+                  };
+                  collapseAll(treeData);
+                  setCollapsedNodes(collapsed);
+                }}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition"
+              >
+                {language === 'km' ? 'បង្រួមទាំងអស់' : 'Collapse All'}
+              </button>
             </div>
           </div>
-          <span className="text-xs bg-indigo-500/30 text-indigo-200 px-3 py-1 rounded-full border border-indigo-500/40">
-            Headquarters &bull; Phnom Penh
-          </span>
+
+          {/* Org Chart Canvas */}
+          <div className="overflow-x-auto py-8 px-4 flex justify-center min-h-[500px]">
+            {loading ? (
+              <div className="flex items-center justify-center space-x-2 text-slate-400 text-xs py-20">
+                <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                <span>Building Organizational Tree...</span>
+              </div>
+            ) : treeData.length > 0 ? (
+              <div className="flex flex-col space-y-12 items-center">
+                {treeData.map((rootNode) => renderTreeNode(rootNode, 0))}
+              </div>
+            ) : (
+              <div className="text-center py-20 text-slate-400 text-xs">
+                No active employee hierarchy found.
+              </div>
+            )}
+          </div>
         </div>
+      )}
 
-        {/* Departments List */}
-        <div className="space-y-3 pt-2">
-          {orgData[0].departments.map((dept) => {
-            const isExpanded = expandedDepts[dept.id];
-            const deptHeadcount = dept.positions.reduce((acc, p) => acc + p.headcount_budget, 0);
-
-            return (
-              <div key={dept.id} className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <button
-                  onClick={() => toggleDept(dept.id)}
-                  className="w-full bg-slate-50 hover:bg-slate-100/80 p-4 flex items-center justify-between transition-colors"
+      {/* TAB 2: Headcount & Budgeting Breakdown */}
+      {activeTab === 'budget' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {deptBudgets.map((dept) => {
+              const fillPct = Math.min(100, dept.utilization_pct);
+              return (
+                <div
+                  key={dept.department_id}
+                  className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3"
                 >
-                  <div className="flex items-center space-x-3">
-                    {isExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-slate-500" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-500" />
-                    )}
-                    <Building2 className="w-5 h-5 text-indigo-600" />
-                    <div className="text-left">
-                      <span className="font-bold text-sm text-slate-900">
-                        {language === 'km' ? dept.name_kh : dept.name_en}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                        {dept.code}
                       </span>
-                      <span className="ml-2 text-xs font-mono text-slate-400">({dept.code})</span>
+                      <h4 className="text-sm font-bold text-slate-900 mt-1">
+                        {language === 'km' ? dept.name_kh : dept.name_en}
+                      </h4>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full font-semibold border border-indigo-100">
-                      {dept.positions.length} Positions &bull; {deptHeadcount} Headcount
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        dept.status === 'OPTIMAL'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : dept.status === 'OVER_BUDGET'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}
+                    >
+                      {dept.status}
                     </span>
                   </div>
-                </button>
 
-                {isExpanded && (
-                  <div className="p-4 bg-white divide-y divide-slate-100">
-                    {dept.positions.length > 0 ? (
-                      dept.positions.map((pos) => (
-                        <div
-                          key={pos.id}
-                          className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs hover:bg-slate-50/50 px-2 rounded-lg transition"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <Briefcase className="w-4 h-4 text-slate-400 shrink-0" />
-                            <div>
-                              <div className="font-semibold text-slate-900">
-                                {language === 'km' ? pos.title_kh : pos.title_en}
-                              </div>
-                              <div className="text-[11px] text-slate-400 font-khmer">
-                                {language === 'km' ? pos.title_en : pos.title_kh}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono font-medium">
-                              {pos.job_grade}
-                            </span>
-                            <span className="text-slate-600 font-medium">
-                              Budget Band:{' '}
-                              <strong className="text-slate-900 font-mono">
-                                ${pos.min_salary} - ${pos.max_salary} USD
-                              </strong>
-                            </span>
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                              {pos.headcount_budget} Seat{pos.headcount_budget > 1 ? 's' : ''}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-slate-400 italic py-2">
-                        No positions defined in this department yet.
-                      </p>
-                    )}
+                  {/* Utilization Progress Bar */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-500 font-medium">Headcount Fill Rate</span>
+                      <span className="font-bold text-slate-900">
+                        {dept.actual_headcount} / {dept.approved_headcount} ({dept.utilization_pct}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className={`h-2.5 rounded-full transition-all duration-500 ${
+                          dept.status === 'OVER_BUDGET'
+                            ? 'bg-rose-500'
+                            : dept.status === 'OPTIMAL'
+                            ? 'bg-emerald-500'
+                            : 'bg-indigo-600'
+                        }`}
+                        style={{ width: `${fillPct}%` }}
+                      ></div>
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Add Department Modal */}
-      {showAddDeptModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  {/* Financial Metrics */}
+                  <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold">
+                        Monthly Budget
+                      </span>
+                      <p className="font-bold text-slate-800">${dept.monthly_budget_usd.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold">
+                        Actual Payroll
+                      </span>
+                      <p className="font-bold text-slate-800">${dept.actual_burden_usd.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-50 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500">
+                      {dept.vacancies > 0 ? (
+                        <span className="text-amber-600 font-medium">
+                          {dept.vacancies} open position{dept.vacancies > 1 ? 's' : ''} to recruit
+                        </span>
+                      ) : (
+                        <span className="text-emerald-600 font-medium">Fully staffed</span>
+                      )}
+                    </span>
+                    <span className="text-slate-400">{dept.positions_count} Job Titles</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: Job Grading & Salary Bands Matrix */}
+      {activeTab === 'bands' && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-4 p-5">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                {language === 'km' ? 'តារាងកម្រិតប្រាក់បៀវត្សតាមតួនាទី' : 'Position Salary Grade & Bands Matrix'}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {language === 'km'
+                  ? 'កំណត់កម្រិតប្រាក់បៀវត្សអប្បបរមា និងអតិបរមាស្របតាមស្ដង់ដារទីផ្សារកម្ពុជា'
+                  : 'Authorized compensation bands with minimum and maximum thresholds for Cambodian enterprises.'}
+              </p>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg">
+              USD / KHR Benchmark
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600 uppercase font-semibold text-[10px] border-y border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3">Grade</th>
+                  <th className="py-2.5 px-3">Position Title</th>
+                  <th className="py-2.5 px-3">Department</th>
+                  <th className="py-2.5 px-3">Approved Quota</th>
+                  <th className="py-2.5 px-3">Min Salary (USD)</th>
+                  <th className="py-2.5 px-3">Max Salary (USD)</th>
+                  <th className="py-2.5 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <tr className="hover:bg-slate-50">
+                  <td className="py-2.5 px-3 font-mono font-bold text-indigo-600">GRADE-E1</td>
+                  <td className="py-2.5 px-3 font-bold text-slate-900">HR Director</td>
+                  <td className="py-2.5 px-3 text-slate-600">Human Resources</td>
+                  <td className="py-2.5 px-3 font-mono">1</td>
+                  <td className="py-2.5 px-3 font-mono">$1,500.00</td>
+                  <td className="py-2.5 px-3 font-mono">$3,000.00</td>
+                  <td className="py-2.5 px-3">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Compliant
+                    </span>
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50">
+                  <td className="py-2.5 px-3 font-mono font-bold text-indigo-600">GRADE-E1</td>
+                  <td className="py-2.5 px-3 font-bold text-slate-900">Finance Director</td>
+                  <td className="py-2.5 px-3 text-slate-600">Finance &amp; Accounting</td>
+                  <td className="py-2.5 px-3 font-mono">1</td>
+                  <td className="py-2.5 px-3 font-mono">$1,500.00</td>
+                  <td className="py-2.5 px-3 font-mono">$3,000.00</td>
+                  <td className="py-2.5 px-3">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Compliant
+                    </span>
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50">
+                  <td className="py-2.5 px-3 font-mono font-bold text-indigo-600">GRADE-S2</td>
+                  <td className="py-2.5 px-3 font-bold text-slate-900">Senior Software Engineer</td>
+                  <td className="py-2.5 px-3 text-slate-600">Software Engineering</td>
+                  <td className="py-2.5 px-3 font-mono">10</td>
+                  <td className="py-2.5 px-3 font-mono">$1,200.00</td>
+                  <td className="py-2.5 px-3 font-mono">$2,500.00</td>
+                  <td className="py-2.5 px-3">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Compliant
+                    </span>
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50">
+                  <td className="py-2.5 px-3 font-mono font-bold text-indigo-600">GRADE-S1</td>
+                  <td className="py-2.5 px-3 font-bold text-slate-900">Software Engineer</td>
+                  <td className="py-2.5 px-3 text-slate-600">Software Engineering</td>
+                  <td className="py-2.5 px-3 font-mono">15</td>
+                  <td className="py-2.5 px-3 font-mono">$600.00</td>
+                  <td className="py-2.5 px-3 font-mono">$1,200.00</td>
+                  <td className="py-2.5 px-3">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Compliant
+                    </span>
+                  </td>
+                </tr>
+                <tr className="hover:bg-slate-50">
+                  <td className="py-2.5 px-3 font-mono font-bold text-indigo-600">GRADE-S1</td>
+                  <td className="py-2.5 px-3 font-bold text-slate-900">Sales Executive</td>
+                  <td className="py-2.5 px-3 text-slate-600">Sales &amp; Marketing</td>
+                  <td className="py-2.5 px-3 font-mono">8</td>
+                  <td className="py-2.5 px-3 font-mono">$450.00</td>
+                  <td className="py-2.5 px-3 font-mono">$1,000.00</td>
+                  <td className="py-2.5 px-3">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Compliant
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Member Quick Detail Modal */}
+      {selectedNode && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h4 className="text-base font-bold text-slate-900">Add New Department</h4>
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white font-bold flex items-center justify-center text-base shadow">
+                  {selectedNode.name_en
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    {selectedNode.name_en} ({selectedNode.name_kh})
+                  </h3>
+                  <p className="text-xs text-indigo-600">{selectedNode.position_title_en}</p>
+                </div>
+              </div>
               <button
-                onClick={() => setShowAddDeptModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-semibold"
+                onClick={() => setSelectedNode(null)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleAddDept} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">
-                  Department Code (e.g. DEP-MKT)
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newDeptCode}
-                  onChange={(e) => setNewDeptCode(e.target.value)}
-                  placeholder="DEP-..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none uppercase font-mono"
-                />
+            <div className="space-y-2.5 text-xs">
+              <div className="flex justify-between py-1 border-b border-slate-50">
+                <span className="text-slate-500">Employee Code:</span>
+                <span className="font-mono font-bold text-slate-800">{selectedNode.employee_code}</span>
               </div>
+              <div className="flex justify-between py-1 border-b border-slate-50">
+                <span className="text-slate-500">Department:</span>
+                <span className="font-medium text-slate-800">{selectedNode.department_name_en}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-50">
+                <span className="text-slate-500">Direct Reports:</span>
+                <span className="font-bold text-indigo-700">{selectedNode.direct_reports_count} people</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-50">
+                <span className="text-slate-500">Work Email:</span>
+                <span className="text-slate-800 font-mono">{selectedNode.email || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-50">
+                <span className="text-slate-500">Contract Type:</span>
+                <span className="font-semibold text-emerald-700">{selectedNode.employment_type}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-slate-500">Base Salary:</span>
+                <span className="font-mono font-bold text-slate-900">
+                  ${selectedNode.base_salary.toLocaleString()} {selectedNode.salary_currency}
+                </span>
+              </div>
+            </div>
 
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">
-                  Department Name (English)
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newDeptNameEn}
-                  onChange={(e) => setNewDeptNameEn(e.target.value)}
-                  placeholder="e.g. Marketing & Communications"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">
-                  Department Name (Khmer ខ្មែរ)
-                </label>
-                <input
-                  type="text"
-                  value={newDeptNameKh}
-                  onChange={(e) => setNewDeptNameKh(e.target.value)}
-                  placeholder="ឧ. នាយកដ្ឋានទីផ្សារ និងទំនាក់ទំនង"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-khmer"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddDeptModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow"
-                >
-                  Save Department
-                </button>
-              </div>
-            </form>
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setSelectedNode(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

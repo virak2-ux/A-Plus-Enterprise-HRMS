@@ -41,7 +41,7 @@ def list_loans(
     employee_id: Optional[str] = None,
     status: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user=Depends(require_permission("payroll:view")),
+    current_user=Depends(get_current_user),
 ):
     """Lists all employee loans and salary advances."""
     query = db.query(Loan, Employee).join(Employee, Employee.id == Loan.employee_id)
@@ -168,3 +168,115 @@ def record_repayment(
         data={"id": loan.id, "remaining_balance": float(new_balance), "status": loan.status},
         message=f"Payment of {data.amount} recorded. Remaining: {new_balance}"
     )
+
+
+class EmployeeLoanRequest(BaseModel):
+    employee_id: str
+    loan_type: str = "SALARY_ADVANCE"  # "SALARY_ADVANCE", "COMPANY_LOAN"
+    principal_amount: Decimal
+    currency: str = "USD"
+    tenure_months: int = 3
+    notes: Optional[str] = None
+
+
+class LoanApprovalInput(BaseModel):
+    status: str  # "ACTIVE", "REJECTED", "CANCELLED"
+    notes: Optional[str] = None
+
+
+@router.post("/request", response_model=APIResponse[dict])
+def request_employee_loan(
+    data: EmployeeLoanRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Employee Self-Service (ESS) application for salary advance or company loan.
+    Enters the queue with status 'PENDING' for manager / HR review.
+    """
+    emp = db.query(Employee).filter(Employee.id == data.employee_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    tenure = max(1, data.tenure_months)
+    monthly_deduction = round(data.principal_amount / Decimal(str(tenure)), 2)
+    today = date.today()
+    end_year = today.year + (today.month + tenure - 1) // 12
+    end_month = (today.month + tenure - 1) % 12 + 1
+    end_date = date(end_year, end_month, min(today.day, 28))
+
+    loan = Loan(
+        employee_id=data.employee_id,
+        loan_type=data.loan_type,
+        principal_amount=data.principal_amount,
+        currency=data.currency,
+        interest_rate=Decimal("0.00"),
+        monthly_deduction_amount=monthly_deduction,
+        remaining_balance=data.principal_amount,
+        start_date=today,
+        end_date=end_date,
+        status="PENDING",
+        notes=data.notes,
+    )
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+
+    AuditService.log_event(
+        db=db,
+        action="REQUEST_LOAN",
+        module="payroll",
+        entity_type="Loan",
+        entity_id=loan.id,
+        user_id=current_user.id,
+        new_values={
+            "employee_id": emp.id,
+            "principal": float(data.principal_amount),
+            "status": "PENDING",
+        }
+    )
+
+    return APIResponse(
+        data={"id": loan.id, "status": loan.status, "monthly_deduction": float(monthly_deduction)},
+        message="Loan / salary advance request submitted successfully."
+    )
+
+
+@router.put("/{loan_id}/status", response_model=APIResponse[dict])
+def update_loan_status(
+    loan_id: str,
+    data: LoanApprovalInput,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_permission("payroll:manage")),
+):
+    """
+    Manager / HR approval or rejection of pending loan / salary advance applications.
+    """
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    old_status = loan.status
+    loan.status = data.status.upper()
+    if data.notes:
+        loan.notes = f"{loan.notes or ''} | Note: {data.notes}".strip(" | ")
+
+    db.commit()
+    db.refresh(loan)
+
+    AuditService.log_event(
+        db=db,
+        action="UPDATE_LOAN_STATUS",
+        module="payroll",
+        entity_type="Loan",
+        entity_id=loan.id,
+        user_id=current_user.id,
+        old_values={"status": old_status},
+        new_values={"status": loan.status, "notes": data.notes},
+    )
+
+    return APIResponse(
+        data={"id": loan.id, "status": loan.status},
+        message=f"Loan status successfully updated to {loan.status}"
+    )
+

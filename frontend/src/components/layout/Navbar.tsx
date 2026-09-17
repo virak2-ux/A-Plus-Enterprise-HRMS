@@ -6,10 +6,18 @@ import { Globe, DollarSign, Building, Bell, User as UserIcon } from 'lucide-reac
 
 export const Navbar: React.FC = () => {
   const { language, setLanguage, currency, setCurrency, t } = useLanguageCurrency();
+  const [selectedBranch, setSelectedBranch] = React.useState('all');
+
+  const branches = [
+    { id: 'all', name_en: 'All Locations (HQ & Branches)', name_kh: 'គ្រប់ទីតាំង (ការិយាល័យកណ្តាល & សាខា)' },
+    { id: 'pnh', name_en: 'Phnom Penh HQ', name_kh: 'ស្នាក់ការកណ្តាលភ្នំពេញ' },
+    { id: 'rep', name_en: 'Siem Reap Regional Hub', name_kh: 'សាខាតំបន់សៀមរាប' },
+    { id: 'kos', name_en: 'Sihanoukville Port Hub', name_kh: 'សាខាកំពង់ផែព្រះសីហនុ' },
+  ];
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
-      {/* Left: Brand & Company Badge */}
+      {/* Left: Brand, Company Badge & Branch Switcher */}
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow">
@@ -24,6 +32,21 @@ export const Navbar: React.FC = () => {
               {t('company_name')}
             </div>
           </div>
+        </div>
+
+        {/* Branch Context Selector */}
+        <div className="hidden lg:flex items-center pl-3 border-l border-slate-200">
+          <select
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value)}
+            className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                📍 {language === 'km' ? b.name_kh : b.name_en}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

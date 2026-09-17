@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import date
 from decimal import Decimal
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user, require_permission
@@ -254,3 +255,38 @@ def approve_leave_request(
     )
 
     return APIResponse(data=req, message="Leave request approved")
+
+
+class LeaveRejectInput(BaseModel):
+    rejection_reason: Optional[str] = "Declined by manager / supervisor"
+
+
+@router.put("/requests/{request_id}/reject", response_model=APIResponse[dict])
+def reject_leave_request(
+    request_id: str,
+    payload: Optional[LeaveRejectInput] = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    req = db.query(LeaveRequest).filter(LeaveRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+
+    reason = payload.rejection_reason if payload and payload.rejection_reason else "Declined by supervisor"
+    req.status = "REJECTED"
+    req.rejection_reason = reason
+    db.commit()
+    db.refresh(req)
+
+    AuditService.log_event(
+        db=db,
+        action="REJECT_LEAVE",
+        module="leave",
+        entity_type="LeaveRequest",
+        entity_id=req.id,
+        user_id=current_user.id,
+        new_values={"status": "REJECTED", "reason": reason}
+    )
+
+    return APIResponse(data={"id": req.id, "status": req.status, "rejection_reason": reason}, message="Leave request rejected")
+
