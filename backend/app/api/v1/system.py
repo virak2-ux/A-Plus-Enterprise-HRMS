@@ -1,10 +1,14 @@
+import io
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, Query, Body
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, require_permission
 from app.models.system import AuditLog, SystemSetting
 from app.schemas.common import APIResponse, PaginatedResponse
 from app.services.audit_service import AuditService
+from app.services.backup_service import BackupService
 
 router = APIRouter()
 
@@ -140,3 +144,97 @@ def update_settings(
     )
 
     return APIResponse(data=new_snapshot, message="System settings updated successfully")
+
+
+@router.get("/backup/excel")
+def export_backup_excel(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_permission("system:configure")),
+):
+    """
+    Exports a comprehensive multi-sheet Microsoft Excel (.xlsx) backup of the entire HRMS database.
+    Includes Employees, Departments, Positions, Attendance, Leave, Payroll, Audit Logs, and Settings.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    excel_bytes = BackupService.generate_excel_backup(db)
+
+    AuditService.log_event(
+        db=db,
+        action="EXPORT_BACKUP_EXCEL",
+        module="system",
+        entity_type="SystemBackup",
+        entity_id="excel",
+        user_id=current_user.id,
+        new_values={"format": "xlsx", "timestamp": timestamp},
+    )
+
+    filename = f"a_plus_hrms_full_backup_{timestamp}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(excel_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
+    )
+
+
+@router.get("/backup/csv")
+def export_backup_csv(
+    table: Optional[str] = Query(None, description="Specific table name or 'all' for complete ZIP archive"),
+    db: Session = Depends(get_db),
+    current_user=Depends(require_permission("system:configure")),
+):
+    """
+    Exports HRMS system data in RFC-4180 CSV format with UTF-8 BOM encoding for seamless Khmer Unicode display.
+    If 'table' is specified (e.g. employees, attendance, leave, payroll, departments, positions, audit_logs, settings),
+    returns an individual .csv file. Otherwise (or if table='all'), returns a compressed .zip archive of all tables.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    if table and table.lower() != "all":
+        tbl_clean = table.lower().strip()
+        csv_text = BackupService.generate_csv_data(db, tbl_clean)
+        csv_bytes = csv_text.encode("utf-8-sig")
+        filename = f"a_plus_hrms_{tbl_clean}_{timestamp}.csv"
+
+        AuditService.log_event(
+            db=db,
+            action="EXPORT_BACKUP_CSV_TABLE",
+            module="system",
+            entity_type="SystemBackup",
+            entity_id=tbl_clean,
+            user_id=current_user.id,
+            new_values={"format": "csv", "table": tbl_clean, "timestamp": timestamp},
+        )
+
+        return StreamingResponse(
+            io.BytesIO(csv_bytes),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Expose-Headers": "Content-Disposition",
+            },
+        )
+    else:
+        zip_bytes = BackupService.generate_csv_zip_backup(db)
+        filename = f"a_plus_hrms_full_backup_csv_{timestamp}.zip"
+
+        AuditService.log_event(
+            db=db,
+            action="EXPORT_BACKUP_CSV_ZIP",
+            module="system",
+            entity_type="SystemBackup",
+            entity_id="zip_archive",
+            user_id=current_user.id,
+            new_values={"format": "zip", "timestamp": timestamp},
+        )
+
+        return StreamingResponse(
+            io.BytesIO(zip_bytes),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Expose-Headers": "Content-Disposition",
+            },
+        )

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLanguageCurrency } from '@/context/LanguageCurrencyContext';
-import apiClient from '@/lib/api';
+import apiClient, { API_BASE_URL, getValidAuthToken } from '@/lib/api';
 import {
   FileBarChart,
   Download,
@@ -18,6 +18,8 @@ import {
   ShieldCheck,
   DollarSign,
   TrendingUp,
+  Archive,
+  RefreshCw,
 } from 'lucide-react';
 
 interface ReportOption {
@@ -288,6 +290,50 @@ export default function ReportsPage() {
     document.body.removeChild(link);
   };
 
+  const [downloadingBackup, setDownloadingBackup] = useState<'excel' | 'csv' | null>(null);
+
+  const handleDownloadFullBackup = async (format: 'excel' | 'csv') => {
+    try {
+      setDownloadingBackup(format);
+      const token = await getValidAuthToken();
+      const url = format === 'excel'
+        ? `${API_BASE_URL}/system/backup/excel`
+        : `${API_BASE_URL}/system/backup/csv`;
+      const defaultFilename = format === 'excel'
+        ? `a_plus_hrms_full_backup_${new Date().toISOString().slice(0, 10)}.xlsx`
+        : `a_plus_hrms_full_backup_csv_${new Date().toISOString().slice(0, 10)}.zip`;
+
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Backup download failed');
+
+      const disposition = res.headers.get('Content-Disposition');
+      let filename = defaultFilename;
+      if (disposition && disposition.includes('filename=')) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+        if (matches && matches[1]) {
+          filename = matches[1].replace(/['"]/g, '').trim();
+        }
+      }
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Download backup error:', err);
+      alert('Failed to download system backup. Please check your admin privileges.');
+    } finally {
+      setDownloadingBackup(null);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -314,18 +360,52 @@ export default function ReportsPage() {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Active Report CSV */}
           <button
             onClick={handleExportCSV}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+            className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+            title="Export currently displayed report as CSV"
           >
-            <Download className="w-4 h-4" />
-            <span>Export CSV / Excel</span>
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Table CSV</span>
           </button>
+
+          {/* Full Backup Excel */}
+          <button
+            onClick={() => handleDownloadFullBackup('excel')}
+            disabled={downloadingBackup !== null}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50"
+            title="Download complete system database backup in multi-sheet Excel (.xlsx)"
+          >
+            {downloadingBackup === 'excel' ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+            )}
+            <span>Backup Excel (.xlsx)</span>
+          </button>
+
+          {/* Full Backup CSV ZIP */}
+          <button
+            onClick={() => handleDownloadFullBackup('csv')}
+            disabled={downloadingBackup !== null}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50"
+            title="Download full database tables in compressed CSV ZIP archive (UTF-8 BOM)"
+          >
+            {downloadingBackup === 'csv' ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Archive className="w-3.5 h-3.5" />
+            )}
+            <span>Backup CSV (.zip)</span>
+          </button>
+
+          {/* Print */}
           <button
             onClick={handlePrint}
-            className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-sm transition"
           >
-            <Printer className="w-4 h-4" />
+            <Printer className="w-3.5 h-3.5" />
             <span>Print Report</span>
           </button>
         </div>
