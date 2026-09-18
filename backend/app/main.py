@@ -42,6 +42,8 @@ app.add_middleware(
 
 
 @app.get("/api/health", tags=["Health"])
+@app.get("/api/backend/api/health", tags=["Health"])
+@app.get("/api/backend/health", tags=["Health"])
 def health_check():
     return {
         "status": "healthy",
@@ -52,4 +54,7 @@ def health_check():
     }
 
 
+# Support standard routing and Vercel multi-service rewrite routing
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(api_router, prefix=f"/api/backend{settings.API_V1_STR}")
+
