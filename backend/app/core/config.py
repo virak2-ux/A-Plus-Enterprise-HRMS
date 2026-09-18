@@ -20,7 +20,11 @@ class Settings(BaseSettings):
         "DATABASE_URL",
         "postgresql+psycopg://postgres:postgres@localhost:5432/cambodia_hrms"
     )
-    SQLITE_FALLBACK_URL: str = "sqlite:///./cambodia_hrms.db"
+    SQLITE_FALLBACK_URL: str = (
+        "sqlite:////tmp/cambodia_hrms.db"
+        if os.getenv("VERCEL")
+        else "sqlite:///./cambodia_hrms.db"
+    )
     USE_SQLITE_FALLBACK: bool = True
 
     # Redis / Celery
