@@ -151,3 +151,27 @@ body {
 .dark .hover\:bg-slate-200:hover {
   background-color: #334155 !important;
 }
+
+/* Recharts Tooltip High-Contrast Styling */
+.recharts-default-tooltip {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6) !important;
+  padding: 8px 12px !important;
+}
+
+.recharts-tooltip-item,
+.recharts-tooltip-item-name,
+.recharts-tooltip-item-separator,
+.recharts-tooltip-item-value,
+.recharts-tooltip-label {
+  color: #f8fafc !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.recharts-tooltip-item-value {
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+}

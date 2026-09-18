@@ -180,7 +180,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Analytics Charts Grid */}
+        {/* Analytics Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Headcount by Department */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -193,7 +193,21 @@ export default function DashboardPage() {
                 <XAxis dataKey="name" stroke="#64748b" fontSize={11} interval={0} angle={-15} textAnchor="end" />
                 <YAxis stroke="#64748b" fontSize={12} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
+                  content={({ active, payload, label }: any) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-slate-900/95 border border-slate-700/80 px-3.5 py-2.5 rounded-lg shadow-2xl backdrop-blur-sm z-50">
+                          <p className="text-xs font-bold text-slate-100 mb-1">{label}</p>
+                          <div className="flex items-center space-x-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block shrink-0" />
+                            <span className="text-xs font-medium text-slate-300">Staff Count:</span>
+                            <span className="text-xs font-bold text-sky-400 font-mono">{payload[0].value} headcount</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
                 />
                 <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -223,8 +237,24 @@ export default function DashboardPage() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: number) => formatMoney(val)}
-                  contentStyle={{ backgroundColor: '#0f172a', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
+                  content={({ active, payload }: any) => {
+                    if (active && payload && payload.length) {
+                      const item = payload[0];
+                      return (
+                        <div className="bg-slate-900/95 border border-slate-700/80 px-3.5 py-2.5 rounded-lg shadow-2xl backdrop-blur-sm z-50">
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                              style={{ backgroundColor: item.payload?.color || item.color }}
+                            />
+                            <span className="text-xs font-medium text-slate-200">{item.name} :</span>
+                            <span className="text-xs font-bold text-white font-mono">{formatMoney(item.value)}</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
               </PieChart>
