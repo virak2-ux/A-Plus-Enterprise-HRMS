@@ -14,9 +14,12 @@ logger = logging.getLogger("hrms.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Ensure tables exist
-    logger.info("Checking and creating database tables...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database initialized successfully.")
+    try:
+        logger.info("Checking and creating database tables...")
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database initialized successfully.")
+    except Exception as e:
+        logger.error(f"Database initialization warning: {e}")
     yield
     # Shutdown
     logger.info("Shutting down HRMS application.")
